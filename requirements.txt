@@ -1,0 +1,6 @@
+streamlit
+pandas
+numpy
+groq
+python-dotenv
+rapidfuzz
