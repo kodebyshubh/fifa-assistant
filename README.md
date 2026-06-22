@@ -121,6 +121,26 @@ Streamlit display
 
 ---
 
+## How to Scale This
+
+Current prototype uses CSV + in-memory Pandas. Production path:
+
+```
+FIFA CSV (prototype)
+     ↓
+PostgreSQL  ← structured storage, indexed queries
+     ↓
+FastAPI     ← REST API layer, separates UI from data logic
+     ↓
+Redis       ← cache frequent queries (top players, team stats)
+     ↓
+LLM Layer   ← same intent classify + summary, now stateless microservice
+```
+
+This mirrors IQM's real stack: structured data → query engine → AI insights layer.
+
+---
+
 ## Project Structure
 
 ```

@@ -1,5 +1,13 @@
+import logging
 import pandas as pd
 import streamlit as st
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger(__name__)
 
 from data_engine import (
     DATA_SUMMARY,
@@ -97,6 +105,7 @@ with col2:
 if st.session_state.do_search and st.session_state.question_text.strip():
     st.session_state.do_search = False
     q = st.session_state.question_text.strip()
+    log.info("QUERY: %s", q)
 
     with st.spinner("Classifying intent..."):
         intent_result = classify_intent(q)
@@ -104,6 +113,7 @@ if st.session_state.do_search and st.session_state.question_text.strip():
     intent = intent_result.get("intent", "unknown")
     params = intent_result.get("params", {})
     confidence = intent_result.get("confidence", "low")
+    log.info("INTENT: %s | confidence: %s | params: %s", intent, confidence, params)
 
     badge = {"high": "🟢", "medium": "🟡", "low": "🔴"}.get(confidence, "🔴")
     st.caption(f"{badge} Intent: **{intent}** | Confidence: {confidence}")
@@ -139,11 +149,15 @@ if st.session_state.do_search and st.session_state.question_text.strip():
                 err = "Couldn't understand that question. Try asking about top players, player comparisons, or filtering by position/age/pace."
         except Exception as e:
             err = f"Data error: {e}"
+            log.error("DATA ERROR: %s", e)
 
     if err:
+        log.warning("ERR: %s", err)
         st.error(err)
 
     elif result is not None:
+        rows = len(result) if isinstance(result, pd.DataFrame) else len(result.get("found", []))
+        log.info("RESULT: %s rows/players", rows)
         if isinstance(result, pd.DataFrame):
             if result.empty:
                 st.warning("No players match these filters. Try broadening your search.")
@@ -159,14 +173,14 @@ if st.session_state.do_search and st.session_state.question_text.strip():
             if comp is not None:
                 st.success(f"Comparing: {' vs '.join(result.get('found', []))}")
                 comp_orig = comp.copy()
-                comp_disp = comp.copy()
+                comp_disp = comp.copy().astype(object)
                 for idx in comp_disp.index:
                     if idx == "value_eur":
                         comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: f"€{x/1_000_000:.1f}M")
                     elif idx == "wage_eur":
                         comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: f"€{int(x):,}/wk")
                     else:
-                        comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: int(x))
+                        comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: str(int(x)))
 
                 def _hl(row):
                     orig = comp_orig.loc[row.name]
@@ -184,8 +198,10 @@ if st.session_state.do_search and st.session_state.question_text.strip():
         with st.spinner("Generating insight..."):
             summary = generate_summary(intent, params, result, q)
         if summary:
+            log.info("SUMMARY: generated (%d chars)", len(summary))
             st.info(f"💡 {summary}")
         else:
+            log.warning("SUMMARY: unavailable")
             st.caption("AI summary unavailable")
 
 st.divider()
