@@ -28,6 +28,16 @@ The data logic is fully deterministic — LLMs only handle natural language inpu
 
 ---
 
+## Screenshots
+
+![Top players query](screenshots/ss1.png)
+
+![Player comparison](screenshots/ss2.png)
+
+![Filtered search results](screenshots/ss3.png)
+
+---
+
 ## How to Run
 
 **Requirements:** Python 3.9+, a free [Groq API key](https://console.groq.com)
