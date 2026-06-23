@@ -14,6 +14,7 @@ from data_engine import (
     best_value_players,
     compare_players,
     filter_players,
+    get_player_info,
     team_aggregation,
     top_n_players,
 )
@@ -85,10 +86,15 @@ with st.sidebar:
 st.title("⚽ FIFA Data Assistant")
 st.caption("Ask questions about FIFA 23 player data")
 
+def _on_enter():
+    if st.session_state.question_text.strip():
+        st.session_state.do_search = True
+
 question = st.text_input(
     "Ask a question:",
     key="question_text",
     placeholder="e.g. Compare Messi and Ronaldo",
+    on_change=_on_enter,
 )
 
 col1, col2 = st.columns([1, 8])
@@ -145,6 +151,12 @@ if st.session_state.do_search and st.session_state.question_text.strip():
                     top_n=params.get("top_n", 15),
                     min_overall=params.get("min_overall", 80),
                 )
+            elif intent == "player_info":
+                player_name = params.get("player", "")
+                if not player_name:
+                    err = "No player name found in your question."
+                else:
+                    result = get_player_info(player_name)
             else:
                 err = "Couldn't understand that question. Try asking about top players, player comparisons, or filtering by position/age/pace."
         except Exception as e:
@@ -166,34 +178,53 @@ if st.session_state.do_search and st.session_state.question_text.strip():
                 st.dataframe(_fmt(result), use_container_width=True)
 
         elif isinstance(result, dict):
-            comp = result.get("comparison")
-            not_found = result.get("not_found", [])
-            if not_found:
-                st.warning(f"Player(s) not found: {', '.join(not_found)}")
-            if comp is not None:
-                st.success(f"Comparing: {' vs '.join(result.get('found', []))}")
-                comp_orig = comp.copy()
-                comp_disp = comp.copy().astype(object)
-                for idx in comp_disp.index:
-                    if idx == "value_eur":
-                        comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: f"€{x/1_000_000:.1f}M")
-                    elif idx == "wage_eur":
-                        comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: f"€{int(x):,}/wk")
-                    else:
-                        comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: str(int(x)))
+            # player_info result
+            if "player" in result and "meta" in result:
+                if result["not_found"]:
+                    st.warning(f"Player not found: {result['not_found']}")
+                elif result["player"] is not None:
+                    meta = result["meta"]
+                    st.success(f"{result['found']} — {meta['club_name']} | {meta['nationality_name']} | {meta['position']}")
+                    player_df = result["player"].copy().astype(object)
+                    for idx in player_df.index:
+                        if idx == "value_eur":
+                            player_df.loc[idx, "value"] = f"€{result['player'].loc[idx, 'value']/1_000_000:.1f}M"
+                        elif idx == "wage_eur":
+                            player_df.loc[idx, "value"] = f"€{int(result['player'].loc[idx, 'value']):,}/wk"
+                        else:
+                            player_df.loc[idx, "value"] = str(int(result["player"].loc[idx, "value"]))
+                    st.dataframe(player_df, use_container_width=True)
 
-                def _hl(row):
-                    orig = comp_orig.loc[row.name]
-                    if orig.nunique() == 1:
-                        return [""] * len(row)
-                    return [
-                        "background-color: #1a6b3c; color: white; font-weight: bold" if v == orig.max() else ""
-                        for v in orig
-                    ]
+            # compare result
+            elif "comparison" in result:
+                comp = result.get("comparison")
+                not_found = result.get("not_found", [])
+                if not_found:
+                    st.warning(f"Player(s) not found: {', '.join(not_found)}")
+                if comp is not None:
+                    st.success(f"Comparing: {' vs '.join(result.get('found', []))}")
+                    comp_orig = comp.copy()
+                    comp_disp = comp.copy().astype(object)
+                    for idx in comp_disp.index:
+                        if idx == "value_eur":
+                            comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: f"€{x/1_000_000:.1f}M")
+                        elif idx == "wage_eur":
+                            comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: f"€{int(x):,}/wk")
+                        else:
+                            comp_disp.loc[idx] = comp_disp.loc[idx].apply(lambda x: str(int(x)))
 
-                st.dataframe(comp_disp.style.apply(_hl, axis=1), use_container_width=True)
-            elif not not_found:
-                st.warning("Could not find players to compare.")
+                    def _hl(row):
+                        orig = comp_orig.loc[row.name]
+                        if orig.nunique() == 1:
+                            return [""] * len(row)
+                        return [
+                            "background-color: #1a6b3c; color: white; font-weight: bold" if v == orig.max() else ""
+                            for v in orig
+                        ]
+
+                    st.dataframe(comp_disp.style.apply(_hl, axis=1), use_container_width=True)
+                elif not not_found:
+                    st.warning("Could not find players to compare.")
 
         with st.spinner("Generating insight..."):
             summary = generate_summary(intent, params, result, q)

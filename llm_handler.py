@@ -18,6 +18,7 @@ Intents:
 - filter: user wants players matching CONDITIONS or THRESHOLDS like pace, age, nationality, club, potential. Example: "strikers with pace above 85", "German strikers", "young players under 23", "best players at Real Madrid". Params: max_age=int or null, min_pace=int or null, min_overall=int or null, position=str or null (FIFA codes), club=str or null, nationality=str or null, min_potential=int or null.
 - team_stats: user wants team-level rankings or averages. Example: "teams with highest average rating". Params: top_n=int default 10.
 - best_value: user wants value-for-money analysis. Example: "best value players", "underrated players". Params: top_n=int default 15, min_overall=int default 80.
+- player_info: user wants profile, stats, or analysis of a SINGLE named player. Example: "short analysis of messi", "tell me about Ronaldo", "who is Mbappe", "messi stats". Params: player=str (player name).
 - unknown: cannot map to above.
 
 IMPORTANT: Use "filter" when the question has any condition beyond just ranking (pace threshold, nationality, club, age limit). Use "top_n" ONLY for pure ranking with no extra filter conditions.

@@ -136,6 +136,21 @@ def team_aggregation(top_n: int = 10) -> pd.DataFrame:
     return result.rename(columns={"club_name": "club"})
 
 
+def get_player_info(name: str) -> dict:
+    result = _find_player(name)
+    if result is None:
+        return {"found": None, "not_found": name, "player": None}
+    display, row = result
+    attrs = ["overall", "potential", "pace", "shooting", "passing", "dribbling", "defending", "physic", "age", "value_eur", "wage_eur"]
+    extra = ["club_name", "nationality_name", "position"]
+    info = pd.DataFrame(
+        {"value": [row[a] for a in attrs]},
+        index=attrs,
+    )
+    meta = {col: row[col] for col in extra}
+    return {"found": display, "not_found": None, "player": info, "meta": meta}
+
+
 def best_value_players(top_n: int = 15, min_overall: int = 80) -> pd.DataFrame:
     df = _data[(_data["overall"] >= min_overall) & (_data["value_eur"] > 0)].copy()
     df["value_score"] = df["overall"] / (df["value_eur"] / 1_000_000 + 1)
