@@ -32,10 +32,15 @@ The data logic is fully deterministic — LLMs only handle natural language inpu
 
 ![Top players query](screenshots/ss1.png)
 
+-----------------------------------------------
 ![Player comparison](screenshots/ss2.png)
 
+
+-----------------------------------------------
 ![Filtered search results](screenshots/ss3.png)
 
+
+-----------------------------------------------
 ---
 
 ## How to Run
